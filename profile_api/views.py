@@ -19,6 +19,11 @@ from profile_api import models
 
 # Get Auth Token (For user authentication for every request)
 from rest_framework.authentication import TokenAuthentication
+# Get View Auth Token (for login, etc)
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.settings import api_settings
+from rest_framework.permissions import IsAuthenticated
+
 # Import permissions 
 from profile_api import permissions
 
@@ -128,4 +133,28 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     # Define filters & searchable fields
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name', 'email',)
+
+class UserLoginAPIView(ObtainAuthToken):
+    """Handle creating user authentication token"""
+    # Enable browsable API for testing 
+    renderer_classes = (api_settings.DEFAULT_RENDERER_CLASSES)
     
+class UserProfileFeedViewSet(viewsets.ModelViewSet):
+    """Handles creating, reading, and updating profile feed items"""
+    
+    # Define AUTH
+    authentication_classes = (TokenAuthentication,)
+    # Define serializer
+    serializer_class = serializers.ProfileFeedItemSerializer
+    # Define possible model functions to manage
+    queryset = models.ProfileFeedItem.objects.all()
+    # Define permission for user
+    permission_classes = (
+        permissions.UpdateOwnStatus,
+        IsAuthenticated,
+    )
+
+    # DRF override perform_create
+    def perform_create(self, serializer):
+        """Sets the user profile to the logged in user"""
+        serializer.save(user_profile=self.request.user)
